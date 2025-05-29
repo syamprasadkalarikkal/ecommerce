@@ -1,0 +1,102 @@
+/* Add these or update existing styles in login.module.css */
+
+.main {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  min-height: 100vh;
+  font-family: "Georgia", serif;
+}
+
+.container {
+  background-color: #ffffff;
+  border: 1px solid #ccc;
+  padding: 30px 40px;
+  border-radius: 8px;
+  max-width: 400px;
+  width: 100%;
+}
+
+.heading {
+  font-family: 'Georgia', serif;
+  color: #2c3e50;
+  font-size: 2rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 10px;
+}
+
+.inputcontainer {
+  margin-bottom: 1rem;
+}
+
+.label {
+  display: block;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+  color: #333;
+}
+
+.input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #999;
+  border-radius: 4px;
+  font-size: 0.95rem;
+}
+
+.button {
+  width: 100%;
+  background-color: #007BFF;
+  color: #fff;
+  font-weight: bold;
+  padding: 0.5rem;
+  margin-top: 0.5rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.button:hover {
+  background-color: #0056b3;
+}
+
+.google {
+  background-color: #db4437;
+  color: white;
+  margin-top: 10px;
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: none;
+  width: 100%;
+  font-weight: bold;
+}
+
+.google:hover {
+  background-color: #c1351d;
+}
+
+.paragraph {
+  margin-top: 1rem;
+  font-size: 0.95rem;
+  color: #444;
+  text-align: center;
+}
+
+.or {
+  margin: 1rem 0 0.5rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #777;
+}
+
+.link {
+  color: #007BFF;
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
