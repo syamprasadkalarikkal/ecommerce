@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     });
 
     if (response.error) {
-      console.error('❌ Resend error:', response.error);
+      console.error(' Resend error:', response.error);
       return NextResponse.json({ error: 'Failed to send message.' }, { status: 500 });
     }
 
@@ -39,11 +39,11 @@ export async function POST(req: Request) {
   } catch (err: unknown) {
     // Proper type checking
     if (err instanceof Error) {
-      console.error('❌ Unexpected error:', err.message);
+      console.error('Unexpected error:', err.message);
       return NextResponse.json({ error: err.message }, { status: 500 });
     }
 
-    console.error('❌ Unknown error:', err);
+    console.error('Unknown error:', err);
     return NextResponse.json({ error: 'An unknown error occurred.' }, { status: 500 });
   }
 }
