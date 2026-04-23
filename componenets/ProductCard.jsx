@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { FaStar, FaHeart } from "react-icons/fa";
+import { FaStar, FaHeart, FaRegHeart } from "react-icons/fa";
 import { useCart } from "@/context/CartContext";
 import { useRatings } from "@/context/RatingsContext";
 import { useWishlist } from "@/context/WishlistContext";
@@ -16,8 +16,6 @@ export default function ProductCard({
   category,
   sizes = [],
   colors = [],
-  rating = 0,
-  reviewCount = 0,
   onClick,
 }) {
   const { cartItems, addToCart, isAuthenticated } = useCart();
@@ -32,9 +30,9 @@ export default function ProductCard({
   const router = useRouter();
 
   const isWishlisted = wishlist.some((item) => item.product_id === id);
-  const ratingInfo = ratings[id];
-  const actualRating = ratingInfo ? ratingInfo.rate : rating;
-  const actualCount = ratingInfo ? ratingInfo.count : reviewCount;
+  const ratingInfo = ratings[id] || { rate: 0, count: 0 };
+  const actualRating = ratingInfo.rate;
+  const actualCount = ratingInfo.count;
 
   const handleAddToCart = (e) => {
     e.stopPropagation();
@@ -120,10 +118,17 @@ export default function ProductCard({
           className="absolute top-4 right-4 z-10 p-2.5 rounded-full bg-white/80 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-md transform translate-y-2 group-hover:translate-y-0"
           aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
         >
-          <FaHeart
-            size={14}
-            className={`transition-colors duration-300 ${isWishlisted ? "text-accent scale-110" : "text-gray-400 hover:text-accent"}`}
-          />
+          {isWishlisted ? (
+            <FaHeart
+              size={14}
+              className="transition-colors duration-300 text-[#D4AF37] scale-110"
+            />
+          ) : (
+            <FaRegHeart
+              size={14}
+              className="transition-colors duration-300 text-gray-400 hover:text-[#D4AF37]"
+            />
+          )}
         </button>
 
         {/* Quick Add Overlay */}
@@ -141,7 +146,7 @@ export default function ProductCard({
       {/* Product Details - Clean Typography */}
       <div className="flex flex-col flex-grow px-2">
         <div className="flex justify-between items-start mb-2">
-          <p className="text-lg font-serif text-accent tracking-tighter">${price.toFixed(2)}</p>
+          <p className="text-lg font-serif text-accent tracking-tighter">₹{price.toFixed(2)}</p>
         </div>
 
         <p className="text-lg font-serif tracking-tight leading-tight mb-3 opacity-90">

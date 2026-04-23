@@ -69,8 +69,6 @@ export default function NewArrival() {
           <ProductCard
             key={product.id}
             {...product}
-            rating={ratings[product.id]?.rate ?? product.rating?.rate}
-            reviewCount={ratings[product.id]?.count ?? product.rating?.count}
             onClick={(id) => router.push(`/products/${id}`)}
           />
         ))}

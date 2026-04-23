@@ -168,8 +168,6 @@ export default function SearchResults() {
           <ProductCard
             key={product.id}
             {...product}
-            rating={product.rating?.rate}
-            reviewCount={product.rating?.count}
             onClick={(id) => router.push(`/products/${id}`)}
           />
         ))}

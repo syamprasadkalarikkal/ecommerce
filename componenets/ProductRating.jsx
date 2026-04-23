@@ -16,8 +16,8 @@ export default function ProductRating({
   const ratingInfo = ratings[productId];
   const userReview = getUserReview(productId);
   // Calculate the display rating
-  let displayRating = initialRating;
-  let reviewCount = initialCount;
+  let displayRating = 0;
+  let reviewCount = 0;
   // If we have rating info in our context, use that instead
   if (ratingInfo) {
     displayRating = ratingInfo.rate;

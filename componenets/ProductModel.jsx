@@ -16,12 +16,9 @@ export default function ProductModal({ productId, onClose, onReviewSubmit }) {
   const [userExperience, setUserExperience] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const { cartItems, addToCart, isAuthenticated } = useCart();
-  const { ratings, updateRating, getUserReview, deleteUserReview } =
-    useRatings();
+  const { ratings, updateRating, getUserReview, deleteUserReview } = useRatings();
   const router = useRouter();
   const isInCart = cartItems.some((item) => item.id === productId);
-
-  const reviewStorageKey = `kalika_review_${productId}`;
 
   // Load product + review
   useEffect(() => {
@@ -33,11 +30,11 @@ export default function ProductModal({ productId, onClose, onReviewSubmit }) {
         if (!isMounted) return;
         setProduct(data);
 
-        // Load review from localStorage
+        // Load review from context
         const userReview = getUserReview(productId);
         if (userReview) {
           setUserRating(userReview.rating);
-          setUserExperience(userReview.experience);
+          setUserExperience(userReview.experience || "");
           setSubmitted(true);
         }
       } catch (err) {
@@ -82,29 +79,11 @@ export default function ProductModal({ productId, onClose, onReviewSubmit }) {
       router.push("/login");
       return;
     }
-    if (userRating > 0 && userExperience.trim() && product) {
-      // Get current rating data
-      const currentRating = ratings[productId];
-      const initialCount = product.rating?.count || 0;
-      const initialRate = product.rating?.rate || 0;
-      // Calculate the new average rating
-      const reviewCount = currentRating ? currentRating.count : initialCount;
-      const oldTotal =
-        (currentRating ? currentRating.rate : initialRate) * reviewCount;
-      const newCount = reviewCount + 1;
-      const newAvg = (oldTotal + userRating) / newCount;
-
-      // Store the user's review
-      const review = {
-        rating: userRating,
-        experience: userExperience,
-      };
-      localStorage.setItem(reviewStorageKey, JSON.stringify(review));
-      // Update the context
-      updateRating(productId, newAvg, newCount);
+    if (userRating > 0 && product) {
+      updateRating(productId, userRating, userExperience || "");
       setSubmitted(true);
-      // Notify parent component
-      onReviewSubmit(productId, newAvg, newCount);
+      // Let parent know context handled it
+      onReviewSubmit?.(productId, userRating, 1);
     }
   };
 
@@ -114,8 +93,8 @@ export default function ProductModal({ productId, onClose, onReviewSubmit }) {
     setUserRating(0);
     setUserExperience("");
     // Reset the rating in the UI to the original product rating
-    if (product && product.rating) {
-      onReviewSubmit(productId, product.rating.rate, product.rating.count);
+    if (product) {
+      onReviewSubmit(productId, 0, 0);
     }
   };
 
@@ -130,8 +109,8 @@ export default function ProductModal({ productId, onClose, onReviewSubmit }) {
 
   // Get current rating from context if available, otherwise use product data
   const productRating = ratings[productId] || {
-    rate: product.rating?.rate || 0,
-    count: product.rating?.count || 0,
+    rate: 0,
+    count: 0,
   };
 
   return (

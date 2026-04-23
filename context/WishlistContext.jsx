@@ -12,81 +12,59 @@ export const WishlistProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Fetch session and wishlist
+  const loadWishlistFromDatabase = async (uid) => {
+    try {
+      const { data, error } = await supabase
+        .from("wishlist")
+        .select("*")
+        .eq("user_id", uid)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Wishlist fetch error:", error);
+        return [];
+      }
+      return data || [];
+    } catch (error) {
+      console.error(error);
+      return [];
+    }
+  };
+
   useEffect(() => {
     const fetchSessionAndWishlist = async () => {
+      setIsLoading(true);
       try {
-        setIsLoading(true);
-        // Get current session
-        const { data: sessionData, error: sessionError } =
-          await supabase.auth.getSession();
-        if (sessionError) {
-          console.error("Session error:", sessionError);
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error || !session?.user) {
           setIsAuthenticated(false);
           setUserId(null);
           setWishlist([]);
-          return;
-        }
-
-        const uid = sessionData.session?.user?.id || null;
-        setUserId(uid);
-        setIsAuthenticated(!!uid);
-
-        if (uid) {
-          // Fetch wishlist items for authenticated user
-          const { data: items, error: wishlistError } = await supabase
-            .from("wishlist")
-            .select("*")
-            .eq("user_id", uid)
-            .order("created_at", { ascending: false });
-
-          if (wishlistError) {
-            console.error("Wishlist fetch error:", wishlistError);
-            toast.error("Failed to load wishlist");
-          } else {
-            setWishlist(items || []);
-          }
         } else {
-          // Clear wishlist if not authenticated
-          setWishlist([]);
+          const uid = session.user.id;
+          setIsAuthenticated(true);
+          setUserId(uid);
+          const items = await loadWishlistFromDatabase(uid);
+          setWishlist(items);
         }
       } catch (error) {
-        console.error("Error in fetchSessionAndWishlist:", error);
         setIsAuthenticated(false);
         setUserId(null);
         setWishlist([]);
-      } finally {
-        setIsLoading(false);
       }
+      setIsLoading(false);
     };
 
     fetchSessionAndWishlist();
 
-    // Listen for auth state changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       const uid = session?.user?.id || null;
       setUserId(uid);
       setIsAuthenticated(!!uid);
 
       if (uid && event === "SIGNED_IN") {
-        // Fetch wishlist when user signs in
-        try {
-          const { data: items, error } = await supabase
-            .from("wishlist")
-            .select("*")
-            .eq("user_id", uid)
-            .order("created_at", { ascending: false });
-
-          if (!error) {
-            setWishlist(items || []);
-          }
-        } catch (error) {
-          console.error("Error fetching wishlist on sign in:", error);
-        }
+        setWishlist(await loadWishlistFromDatabase(uid));
       } else if (event === "SIGNED_OUT") {
-        // Clear wishlist when user signs out
         setWishlist([]);
       }
     });
@@ -97,50 +75,52 @@ export const WishlistProvider = ({ children }) => {
   }, []);
 
   const addToWishlist = async (item) => {
-    // Check if user is authenticated
     if (!userId || !isAuthenticated) {
       toast.error("Please log in to add items to your wishlist");
       return;
     }
 
-    // Check if item already exists in wishlist
-    const exists = wishlist.some((w) => w.product_id === item.product_id);
+    const exists = wishlist.some((w) => w.product_id === (item.id || item.product_id));
     if (exists) {
       toast("Item is already in your wishlist");
       return;
     }
 
+    // Optimistic UI update
+    setWishlist((prev) => {
+      const updated = [{ ...item, product_id: item.id || item.product_id }, ...prev];
+      return updated;
+    });
+
+    toast.success("Added to wishlist!", {
+      style: {
+        background: "#FDFBF7",
+        color: "#800000",
+        border: "1px solid rgba(0,0,0,0.1)",
+      },
+    });
+
     try {
-      // Add to database
-      const { data, error } = await supabase
+      const payload = {
+        user_id: userId,
+        product_id: item.id || item.product_id,
+        name: item.name || "",
+        price: item.price || 0,
+        image: item.image || null,
+        description: item.description || null,
+        category: item.category || null,
+        created_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase
         .from("wishlist")
-        .insert([
-          {
-            ...item,
-            user_id: userId,
-            created_at: new Date().toISOString(),
-          },
-        ])
-        .select()
-        .single();
+        .insert([payload]);
 
       if (error) {
-        console.error("Database error adding to wishlist:", error);
-        toast.error("Failed to add to wishlist. Please try again.");
-      } else {
-        // Add to local state
-        setWishlist((prev) => [data, ...prev]);
-        toast.success("Added to wishlist!", {
-          style: {
-            background: "#fef2f2",
-            color: "#991b1b",
-            border: "1px solid #f87171",
-          },
-        });
+        console.error("Database error adding to wishlist:", error.message || JSON.stringify(error));
       }
-    } catch (error) {
-      console.error("Error adding to wishlist:", error);
-      toast.error("An unexpected error occurred");
+    } catch (e) {
+      console.error("Exception adding to wishlist:", e);
     }
   };
 
@@ -150,8 +130,11 @@ export const WishlistProvider = ({ children }) => {
       return;
     }
 
+    // Optimistic UI update
+    setWishlist((prev) => prev.filter((w) => w.product_id !== productId && w.id !== productId));
+    toast.success("Removed from wishlist");
+
     try {
-      // Remove from database
       const { error } = await supabase
         .from("wishlist")
         .delete()
@@ -160,15 +143,9 @@ export const WishlistProvider = ({ children }) => {
 
       if (error) {
         console.error("Database error removing from wishlist:", error);
-        toast.error("Failed to remove from wishlist. Please try again.");
-      } else {
-        // Remove from local state
-        setWishlist((prev) => prev.filter((w) => w.product_id !== productId));
-        toast.success("Removed from wishlist");
       }
-    } catch (error) {
-      console.error("Error removing from wishlist:", error);
-      toast.error("An unexpected error occurred");
+    } catch (e) {
+      console.error(e);
     }
   };
 

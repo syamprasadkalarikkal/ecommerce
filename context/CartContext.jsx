@@ -11,58 +11,22 @@ export function CartProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userId, setUserId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [syncError, setSyncError] = useState(null);
-  const [debugInfo, setDebugInfo] = useState({});
-  const [isSigningOut, setIsSigningOut] = useState(false);
   const router = useRouter();
 
-  const log = (message, data) => {
-    console.log(`CART DEBUG: ${message}`, data || "");
-    setDebugInfo((prev) => ({
-      ...prev,
-      [new Date().toISOString()]: { message, data },
-    }));
-  };
-
-  const testDatabaseConnection = async () => {
+  const loadCartFromDatabase = async (uid) => {
     try {
-      log("Testing database connection...");
-      const { data, error } = await supabase
-        .from("cart")
-        .select("count")
-        .limit(1);
-      if (error) {
-        log("Database connection failed", error);
-        setSyncError(`Database error: ${error.message}`);
-        return false;
-      }
-      log("Database connection successful");
-      return true;
-    } catch (err) {
-      log("Database connection exception", err);
-      setSyncError("Database connection failed");
-      return false;
-    }
-  };
-
-  const loadCartFromDatabase = async (userId) => {
-    try {
-      log("Loading cart from database for user:", userId);
       const { data, error } = await supabase
         .from("cart")
         .select("*")
-        .eq("user_id", userId)
+        .eq("user_id", uid)
         .order("created_at", { ascending: true });
 
-      log("Database query result:", { data, error });
-
       if (error) {
-        log("Error loading cart from database", error);
-        setSyncError(`Failed to load cart: ${error.message}`);
+        console.error("Cart fetch error:", error);
         return [];
       }
 
-      const items = (data || []).map((item) => ({
+      return (data || []).map((item) => ({
         id: item.product_id,
         name: item.product_name,
         price: parseFloat(item.product_price),
@@ -71,200 +35,48 @@ export function CartProvider({ children }) {
         description: item.product_description,
         category: item.product_category,
       }));
-
-      log("Cart loaded successfully", { itemCount: items.length, items });
-      setSyncError(null);
-      return items;
-    } catch (error) {
-      log("Unexpected error loading cart", error);
-      setSyncError("Failed to connect to database");
+    } catch (e) {
+      console.error(e);
       return [];
-    }
-  };
-
-  const saveCartItemToDatabase = async (item, userId) => {
-    if (isSigningOut) {
-      log("Prevented database save during sign out");
-      return false;
-    }
-    try {
-      log("Saving cart item to database", { item, userId });
-
-      const dataToSave = {
-        user_id: userId,
-        product_id: item.id,
-        product_name: item.name,
-        product_price: item.price.toString(),
-        product_image: item.image,
-        product_description: item.description || null,
-        product_category: item.category || null,
-        quantity: item.quantity,
-        updated_at: new Date().toISOString(),
-      };
-
-      log("Data being saved:", dataToSave);
-
-      const { data, error } = await supabase
-        .from("cart")
-        .upsert(dataToSave, {
-          onConflict: "user_id,product_id",
-          ignoreDuplicates: false,
-        })
-        .select();
-
-      log("Upsert result:", { data, error });
-
-      if (error) {
-        log("Error saving cart item", error);
-        setSyncError(`Failed to save item: ${error.message}`);
-        return false;
-      }
-
-      log("Item saved successfully", data);
-      setSyncError(null);
-      return true;
-    } catch (error) {
-      log("Unexpected error saving cart item", error);
-      setSyncError("Failed to save item to database");
-      return false;
-    }
-  };
-
-  const removeCartItemFromDatabase = async (productId, userId) => {
-    if (isSigningOut) {
-      log("Prevented database remove during sign out");
-      return false;
-    }
-    try {
-      log("Removing cart item from database", { productId, userId });
-
-      const { error } = await supabase
-        .from("cart")
-        .delete()
-        .eq("user_id", userId)
-        .eq("product_id", productId);
-
-      if (error) {
-        log("Error removing cart item", error);
-        setSyncError(`Failed to remove item: ${error.message}`);
-        return false;
-      }
-
-      log("Item removed successfully");
-      setSyncError(null);
-      return true;
-    } catch (error) {
-      log("Unexpected error removing cart item", error);
-      setSyncError("Failed to remove item from database");
-      return false;
-    }
-  };
-
-  const clearCartFromDatabase = async (userId) => {
-    if (isSigningOut) {
-      log("Prevented database clear during sign out");
-      return false;
-    }
-    try {
-      log("Clearing cart from database", userId);
-
-      const { error } = await supabase
-        .from("cart")
-        .delete()
-        .eq("user_id", userId);
-
-      if (error) {
-        log("Error clearing cart", error);
-        setSyncError(`Failed to clear cart: ${error.message}`);
-        return false;
-      }
-
-      log("Cart cleared successfully");
-      setSyncError(null);
-      return true;
-    } catch (error) {
-      log("Unexpected error clearing cart", error);
-      setSyncError("Failed to clear cart from database");
-      return false;
     }
   };
 
   useEffect(() => {
     const initializeAuth = async () => {
-      log("Initializing authentication...");
       setIsLoading(true);
-
-      const dbConnected = await testDatabaseConnection();
-      log("Database connection status:", dbConnected);
-
       try {
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession();
-        log("Current session:", { session: session?.user?.id, error });
-        if (error) {
-          log("Auth error", error);
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error || !session?.user) {
           setIsAuthenticated(false);
           setUserId(null);
           setCartItems([]);
-        } else if (session?.user) {
-          log("User authenticated", session.user.id);
-          setIsAuthenticated(true);
-          setUserId(session.user.id);
-          if (dbConnected) {
-            const items = await loadCartFromDatabase(session.user.id);
-            setCartItems(items);
-            log("Cart items loaded on initialization:", items);
-          } else {
-            log("Database not connected, cannot load cart");
-          }
         } else {
-          log("User not authenticated");
-          setIsAuthenticated(false);
-          setUserId(null);
-          setCartItems([]);
+          setIsAuthenticated(true);
+          const uid = session.user.id;
+          setUserId(uid);
+          const items = await loadCartFromDatabase(uid);
+          setCartItems(items);
         }
       } catch (error) {
-        log("Initialization error", error);
         setIsAuthenticated(false);
         setUserId(null);
         setCartItems([]);
       }
-
       setIsLoading(false);
-      log("Initialization complete");
     };
 
     initializeAuth();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      log("Auth state changed", { event, userId: session?.user?.id });
-
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN" && session?.user) {
         setIsAuthenticated(true);
-        setUserId(session.user.id);
-        const dbConnected = await testDatabaseConnection();
-        if (dbConnected) {
-          const items = await loadCartFromDatabase(session.user.id);
-          setCartItems(items);
-          log("User signed in, cart loaded from database", {
-            itemCount: items.length,
-          });
-        }
+        const uid = session.user.id;
+        setUserId(uid);
+        setCartItems(await loadCartFromDatabase(uid));
       } else if (event === "SIGNED_OUT") {
-        setIsSigningOut(true);
-        log("User signing out - preserving database, clearing memory only");
         setIsAuthenticated(false);
         setUserId(null);
         setCartItems([]);
-        setSyncError(null);
-        log(
-          "User signed out, cart cleared from memory ONLY (database preserved)",
-        );
-        setTimeout(() => setIsSigningOut(false), 1000);
       }
     });
 
@@ -274,94 +86,83 @@ export function CartProvider({ children }) {
   }, []);
 
   const addToCart = async (item) => {
-    log("addToCart called", { item, isAuthenticated, userId });
-
     if (!isAuthenticated || !userId) {
-      log("User not authenticated, redirecting to login");
       router.push("/login");
       return;
     }
 
-    const currentItems = await loadCartFromDatabase(userId);
-    log("Current items in database before adding:", currentItems);
+    // Optimistic UI update
+    setCartItems((prevItems) => {
+      const existingItem = prevItems.find((p) => p.id === item.id);
+      if (existingItem) {
+        return prevItems.map((p) => p.id === item.id ? { ...p, quantity: p.quantity + (item.quantity || 1) } : p);
+      }
+      return [...prevItems, { ...item, quantity: item.quantity || 1 }];
+    });
 
-    const existingItem = currentItems.find((p) => p.id === item.id);
-    const newQuantity = existingItem
-      ? existingItem.quantity + (item.quantity || 1)
-      : item.quantity || 1;
+    const quantityToAdd = item.quantity || 1;
+    const existingSyncItem = cartItems.find((p) => p.id === item.id);
+    const updatedQuantity = existingSyncItem ? existingSyncItem.quantity + quantityToAdd : quantityToAdd;
 
-    const itemToSave = {
-      ...item,
-      quantity: newQuantity,
+    const dataToSave = {
+      user_id: userId,
+      product_id: item.id || item.product_id,
+      product_name: item.name || "",
+      product_price: item.price ? item.price.toString() : "0",
+      product_image: item.image || null,
+      product_description: item.description || null,
+      product_category: item.category || null,
+      quantity: updatedQuantity,
+      updated_at: new Date().toISOString(),
     };
 
-    log("Item to save:", itemToSave);
-
-    const success = await saveCartItemToDatabase(itemToSave, userId);
-    if (success) {
-      log("Item saved to database, reloading cart");
-      const updatedItems = await loadCartFromDatabase(userId);
-      setCartItems(updatedItems);
-      log("Cart updated in state:", updatedItems);
-    } else {
-      log("Failed to save item to database");
-    }
+    const { error } = await supabase.from("cart").upsert(dataToSave, { onConflict: "user_id,product_id" });
+    if (error) console.error("Error adding to DB:", error);
   };
 
   const removeFromCart = async (id) => {
     if (!userId) return;
-    log("Removing from cart", id);
 
-    const success = await removeCartItemFromDatabase(id, userId);
-    if (success) {
-      const updatedItems = await loadCartFromDatabase(userId);
-      setCartItems(updatedItems);
-      log("Item removed, cart updated");
-    } else {
-      log("Failed to remove item from database");
-    }
+    // Optimistic UI update
+    setCartItems((prevItems) => prevItems.filter((item) => item.id !== id));
+
+    const { error } = await supabase.from("cart").delete().eq("user_id", userId).eq("product_id", id);
+    if (error) console.error("Error deleting from DB:", error);
   };
 
   const updateQuantity = async (id, quantity) => {
     if (!userId || quantity < 1) return;
-    log("Updating quantity", { id, quantity });
 
-    const item = cartItems.find((item) => item.id === id);
-    if (item) {
-      const updatedItem = { ...item, quantity };
-      const success = await saveCartItemToDatabase(updatedItem, userId);
-      if (success) {
-        const updatedItems = await loadCartFromDatabase(userId);
-        setCartItems(updatedItems);
-        log("Quantity updated");
-      } else {
-        log("Failed to update quantity");
-      }
-    }
+    // Optimistic UI update
+    setCartItems((prevItems) => prevItems.map((item) => (item.id === id ? { ...item, quantity } : item)));
+
+    const itemObj = cartItems.find((item) => item.id === id);
+    if (!itemObj) return;
+
+    const dataToSave = {
+      user_id: userId,
+      product_id: itemObj.id,
+      product_name: itemObj.name,
+      product_price: itemObj.price.toString(),
+      product_image: itemObj.image || null,
+      product_description: itemObj.description || null,
+      product_category: itemObj.category || null,
+      quantity: quantity,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } = await supabase.from("cart").upsert(dataToSave, { onConflict: "user_id,product_id" });
+    if (error) console.error("Error updating DB quantity:", error);
   };
 
   const clearCart = async () => {
-    console.trace("clearCart() was called from:");
-    if (!userId || !isAuthenticated || isSigningOut) {
-      log(
-        "Cannot clear cart: user not authenticated, no userId, or signing out",
-        {
-          userId: !!userId,
-          isAuthenticated,
-          isSigningOut,
-        },
-      );
-      return;
-    }
-    log("User explicitly clearing entire cart");
+    if (!userId || !isAuthenticated) return;
 
-    const success = await clearCartFromDatabase(userId);
-    if (success) {
-      setCartItems([]);
-      log("Cart cleared by user action");
-    } else {
-      log("Failed to clear cart");
-    }
+    // Optimistic
+    setCartItems([]);
+
+    const { error } = await supabase.from("cart").delete().eq("user_id", userId);
+    if (error) console.error("Error clearing DB cart:", error);
   };
 
   const contextValue = {
@@ -372,13 +173,9 @@ export function CartProvider({ children }) {
     updateQuantity,
     isAuthenticated,
     isLoading,
-    syncError,
-    debugInfo,
   };
 
-  return (
-    <CartContext.Provider value={contextValue}>{children}</CartContext.Provider>
-  );
+  return <CartContext.Provider value={contextValue}>{children}</CartContext.Provider>;
 }
 
 export function useCart() {

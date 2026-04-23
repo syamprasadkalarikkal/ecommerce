@@ -1,96 +1,128 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { supabase } from "@/lib/supabaseClient";
 
 const RatingsContext = createContext(undefined);
 
 export function RatingsProvider({ children }) {
-  // Change the state structure to an object with productId as keys
   const [ratings, setRatings] = useState({});
+  const [allReviews, setAllReviews] = useState([]);
+  const [userSession, setUserSession] = useState(null);
 
-  // Load ratings from localStorage on mount
   useEffect(() => {
-    const loadRatings = () => {
-      const storedRatings = localStorage.getItem("kalika_ratings");
-      if (storedRatings) {
-        setRatings(JSON.parse(storedRatings));
+    const fetchAllReviews = async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      setUserSession(sessionData.session);
+
+      const { data: reviews, error } = await supabase.from('reviews').select('*');
+      if (!error && reviews) {
+        setAllReviews(reviews);
+
+        // Calculate aggregates
+        const aggregated = {};
+        reviews.forEach(review => {
+          if (!aggregated[review.product_id]) {
+            aggregated[review.product_id] = { rate: 0, count: 0, totalPoints: 0 };
+          }
+          aggregated[review.product_id].count += 1;
+          aggregated[review.product_id].totalPoints += review.rating;
+          aggregated[review.product_id].rate = aggregated[review.product_id].totalPoints / aggregated[review.product_id].count;
+        });
+        setRatings(aggregated);
       }
     };
 
-    loadRatings();
+    fetchAllReviews();
+
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      setUserSession(session);
+    });
+
+    return () => { listener?.subscription.unsubscribe(); };
   }, []);
 
-  // Save ratings to localStorage whenever they change
-  useEffect(() => {
-    if (Object.keys(ratings).length > 0) {
-      localStorage.setItem("kalika_ratings", JSON.stringify(ratings));
-    }
-  }, [ratings]);
-
-  const updateRating = (id, rate, count) => {
-    setRatings((prevRatings) => ({
-      ...prevRatings,
-      [id]: { id, rate, count },
-    }));
+  const getProductReviews = (productId) => {
+    return allReviews.filter(r => Number(r.product_id) === Number(productId));
   };
 
   const getUserReview = (productId) => {
-    const reviewStorageKey = `kalika_review_${productId}`;
-    const savedReview = localStorage.getItem(reviewStorageKey);
-    if (savedReview) {
-      return JSON.parse(savedReview);
-    }
-    return null;
+    if (!userSession?.user?.id) return null;
+    return allReviews.find(r => Number(r.product_id) === Number(productId) && r.user_id === userSession.user.id);
   };
 
-  const deleteUserReview = (productId) => {
-    const reviewStorageKey = `kalika_review_${productId}`;
-    localStorage.removeItem(reviewStorageKey);
-    // Update the ratings state if this product has a rating entry
-    setRatings((prevRatings) => {
-      if (!prevRatings[productId]) {
-        return prevRatings;
-      }
-      // Get the product's original rating without the user's review
-      const product = prevRatings[productId];
-      const userReview = getUserReview(productId);
-      // If there was no user review, just return the current state
-      if (!userReview) {
-        return prevRatings;
-      }
-      // Calculate the original rating and count before user's review
-      const newCount = Math.max(0, product.count - 1);
-      // If this was the only review, remove the rating entirely
-      if (newCount === 0) {
-        const newRatings = { ...prevRatings };
-        delete newRatings[productId];
+  const updateRating = async (productId, rating, experience) => {
+    if (!userSession?.user?.id) return;
+
+    const newReview = {
+      user_id: userSession.user.id,
+      product_id: parseInt(productId),
+      rating,
+      experience: experience || null
+    };
+
+    const { data, error } = await supabase
+      .from('reviews')
+      .upsert(newReview, { onConflict: 'user_id,product_id' })
+      .select()
+      .single();
+
+    if (!error && data) {
+      setAllReviews(prev => {
+        const filtered = prev.filter(r => !(r.user_id === userSession.user.id && Number(r.product_id) === Number(productId)));
+        filtered.push(data);
+        return filtered;
+      });
+      // Recalculate context ratings
+      setRatings(prev => {
+        // Quick recalc logic simplified for context sync
+        const relatedReviews = [...allReviews.filter(r => !(r.user_id === userSession.user.id && Number(r.product_id) === Number(productId))), data];
+        const prodReviews = relatedReviews.filter(r => Number(r.product_id) === Number(productId));
+        const count = prodReviews.length;
+        const totalPoints = prodReviews.reduce((sum, r) => sum + r.rating, 0);
+        return {
+          ...prev,
+          [productId]: { count, rate: count > 0 ? totalPoints / count : 0, totalPoints }
+        };
+      });
+    }
+  };
+
+  const deleteUserReview = async (productId) => {
+    if (!userSession?.user?.id) return;
+
+    const { error } = await supabase
+      .from('reviews')
+      .delete()
+      .eq('user_id', userSession.user.id)
+      .eq('product_id', parseInt(productId));
+
+    if (!error) {
+      setAllReviews(prev => prev.filter(r => !(r.user_id === userSession.user.id && Number(r.product_id) === Number(productId))));
+      setRatings(prev => {
+        const prodReviews = allReviews.filter(r => !(r.user_id === userSession.user.id && Number(r.product_id) === Number(productId)) && Number(r.product_id) === Number(productId));
+        const count = prodReviews.length;
+        const totalPoints = prodReviews.reduce((sum, r) => sum + r.rating, 0);
+        const newRatings = { ...prev };
+        if (count === 0) {
+          delete newRatings[productId];
+        } else {
+          newRatings[productId] = { count, rate: totalPoints / count, totalPoints };
+        }
         return newRatings;
-      }
-      // Otherwise, recalculate the average excluding the user's rating
-      const totalPoints = product.rate * product.count;
-      const pointsWithoutUser = totalPoints - userReview.rating;
-      const newRate = newCount > 0 ? pointsWithoutUser / newCount : 0;
-      // Update with the recalculated values
-      return {
-        ...prevRatings,
-        [productId]: {
-          ...product,
-          rate: newRate,
-          count: newCount,
-        },
-      };
-    });
+      });
+    }
   };
 
   const isReviewed = (productId) => {
-    const reviewStorageKey = `kalika_review_${productId}`;
-    return localStorage.getItem(reviewStorageKey) !== null;
+    return getUserReview(productId) !== undefined && getUserReview(productId) !== null;
   };
 
   const value = {
     ratings,
-    updateRating,
+    getProductReviews,
     getUserReview,
+    updateRating,
     deleteUserReview,
     isReviewed,
   };

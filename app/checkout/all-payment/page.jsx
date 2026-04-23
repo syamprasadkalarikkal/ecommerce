@@ -50,14 +50,16 @@ export default function AllProductsPaymentPage() {
 
   if (cartItems.length === 0) {
     return (
-      <div className="max-w-4xl mx-auto p-8 text-center">
-        <h2 className="text-2xl font-bold mb-4">Your cart is empty</h2>
-        <p className="text-gray-500 mb-6">There are no items to checkout.</p>
+      <div className="max-w-4xl mx-auto p-12 mt-12 text-center border border-black/10 bg-accent/5">
+        <h2 className="text-3xl font-serif mb-6 tracking-tighter">Your Bag is Empty</h2>
+        <p className="text-foreground/60 mb-10 max-w-md mx-auto italic font-light">
+          You haven't selected any luxurious items yet.
+        </p>
         <Link
           href="/products"
-          className="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700 inline-block"
+          className="border border-black text-foreground hover:bg-black hover:text-white px-10 py-4 transition-colors uppercase tracking-[0.2em] text-xs font-bold inline-block"
         >
-          Continue shopping
+          Discover The Collection
         </Link>
       </div>
     );
@@ -248,23 +250,27 @@ export default function AllProductsPaymentPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-4 md:p-8 text-black">
-      <div className="mb-6">
+    <div className="max-w-6xl mx-auto p-4 md:p-8 text-black mb-20 mt-8">
+      <div className="mb-12">
         <Link
           href="/checkout"
-          className="flex items-center text-indigo-600 hover:text-indigo-800"
+          className="flex items-center text-xs uppercase tracking-[0.2em] font-medium text-foreground hover:opacity-70 transition-opacity w-fit"
         >
-          <ChevronLeft size={20} />
-          <span>Back to checkout</span>
+          <ChevronLeft size={16} />
+          <span className="ml-2 border-b border-transparent hover:border-foreground transition-all">Back to bag</span>
         </Link>
       </div>
 
-      <h1 className="text-3xl font-bold mb-8">Complete Your Purchase</h1>
+      <div className="flex flex-col items-center text-center mb-16">
+        <span className="text-xs uppercase tracking-[0.4em] opacity-60 mb-4 block">Final Step</span>
+        <h1 className="text-4xl md:text-5xl font-serif tracking-tighter">Complete Order</h1>
+        <div className="w-16 h-px bg-accent mt-8"></div>
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 lg:gap-8">
+        <div className="lg:col-span-1 order-2 lg:order-1">
+          <div className="bg-accent/5 border border-black/10 p-8 sticky top-8">
+            <h2 className="text-xs uppercase tracking-[0.2em] font-bold mb-6 pb-4 border-b border-black/10">
               Order Summary ({totalItems} {totalItems === 1 ? "item" : "items"})
             </h2>
             <ul className="divide-y divide-gray-200">
@@ -274,23 +280,23 @@ export default function AllProductsPaymentPage() {
                     <Image
                       src={item.image}
                       alt={item.name}
-                      width={64}
-                      height={64}
-                      className="w-16 h-16 object-cover rounded"
+                      width={80}
+                      height={100}
+                      className="w-20 object-cover border border-black/5"
                     />
 
-                    <div className="flex-1">
-                      <h3 className="font-medium text-sm">{item.name}</h3>
-                      <div className="mt-1">
-                        <p className="text-gray-600 text-sm">
-                          Quantity: {item.quantity}
+                    <div className="flex-1 flex flex-col justify-center">
+                      <h3 className="font-serif italic text-sm mb-2">{item.name}</h3>
+                      <div className="space-y-1">
+                        <p className="text-xs uppercase tracking-widest text-foreground/50">
+                          Qty: {item.quantity}
                         </p>
-                        <p className="text-gray-600 font-medium">
-                          ${(item.price * item.quantity).toFixed(2)}
+                        <p className="font-serif text-sm">
+                          ₹{(item.price * item.quantity).toFixed(2)}
                         </p>
                         {item.quantity > 1 && (
-                          <p className="text-gray-500 text-xs">
-                            ${item.price.toFixed(2)} each
+                          <p className="text-xs text-foreground/40 italic">
+                            ₹{item.price.toFixed(2)} each
                           </p>
                         )}
                       </div>
@@ -300,32 +306,32 @@ export default function AllProductsPaymentPage() {
               ))}
             </ul>
 
-            <div className="border-t pt-4 mt-4">
-              <div className="flex justify-between mb-2">
-                <span className="text-gray-600">Subtotal</span>
-                <span>${subtotal.toFixed(2)}</span>
+            <div className="border-t border-black/10 pt-6 mt-6 space-y-4">
+              <div className="flex justify-between text-sm">
+                <span className="text-foreground/70">Subtotal</span>
+                <span className="font-serif">₹{subtotal.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between mb-2">
-                <span className="text-gray-600">Shipping</span>
-                <span>${shippingFee.toFixed(2)}</span>
+              <div className="flex justify-between text-sm">
+                <span className="text-foreground/70">Shipping</span>
+                <span className="font-serif">₹{shippingFee.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between mb-2">
-                <span className="text-gray-600">Tax</span>
-                <span>${tax.toFixed(2)}</span>
+              <div className="flex justify-between text-sm">
+                <span className="text-foreground/70">Estimated Tax</span>
+                <span className="font-serif">₹{tax.toFixed(2)}</span>
               </div>
-              <div className="border-t pt-2 mt-2">
-                <div className="flex justify-between font-semibold">
-                  <span>Total</span>
-                  <span>${total.toFixed(2)}</span>
+              <div className="border-t border-black/10 pt-4 mt-6">
+                <div className="flex justify-between items-center bg-black text-white p-4">
+                  <span className="uppercase tracking-[0.2em] text-xs font-bold">Total</span>
+                  <span className="font-serif text-xl border-l border-white/20 pl-4">₹{total.toFixed(2)}</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="lg:col-span-2 space-y-8">
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold mb-4">Shipping Information</h2>
+        <div className="lg:col-span-2 space-y-12 order-1 lg:order-2">
+          <div className="bg-transparent border border-black/10 p-8">
+            <h2 className="text-xs uppercase tracking-[0.2em] font-bold mb-8 pb-4 border-b border-black/10">Shipping Address</h2>
             <ShippingForm
               form={form}
               errors={errors}
@@ -333,8 +339,8 @@ export default function AllProductsPaymentPage() {
             />
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold mb-4">Payment Method</h2>
+          <div className="bg-transparent border border-black/10 p-8">
+            <h2 className="text-xs uppercase tracking-[0.2em] font-bold mb-8 pb-4 border-b border-black/10">Payment Details</h2>
             <PaymentForm
               form={form}
               errors={errors}
@@ -348,20 +354,22 @@ export default function AllProductsPaymentPage() {
             <button
               onClick={handleCompleteOrder}
               disabled={isProcessing}
-              className="mt-6 w-full bg-green-600 text-white py-3 rounded hover:bg-green-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="mt-12 w-full bg-[#800000] text-white py-5 hover:bg-black transition-colors duration-500 text-xs uppercase tracking-[0.2em] font-bold disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isProcessing
-                ? "Processing..."
-                : `Pay $${total.toFixed(2)} and Complete Order`}
+                ? "Processing Order..."
+                : `Pay ₹${total.toFixed(2)} — Complete Order`}
             </button>
-            <div className="mt-6 flex items-center justify-center space-x-4 text-sm text-gray-500">
+
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center sm:space-x-8 space-y-4 sm:space-y-0 text-xs uppercase tracking-widest text-foreground/50 border-t border-black/10 pt-6">
               <div className="flex items-center">
-                <Shield size={16} className="mr-1" />
-                <span>Secure Payment</span>
+                <Shield size={16} className="mr-2 opacity-60" />
+                <span>Secure Checkout</span>
               </div>
+              <div className="flex items-center hidden sm:block w-px h-4 bg-black/20"></div>
               <div className="flex items-center">
-                <Truck size={16} className="mr-1" />
-                <span>Fast Shipping</span>
+                <Truck size={16} className="mr-2 opacity-60" />
+                <span>Express Delivery</span>
               </div>
             </div>
           </div>

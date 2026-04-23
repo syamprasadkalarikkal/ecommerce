@@ -24,7 +24,22 @@ export default function ProductDetailPage() {
     const [submitted, setSubmitted] = useState(false);
 
     const { cartItems, addToCart, isAuthenticated } = useCart();
-    const { ratings, updateRating, getUserReview, deleteUserReview } = useRatings();
+    const { ratings, updateRating, getUserReview, deleteUserReview, getProductReviews } = useRatings();
+
+    const productReviews = getProductReviews?.(id) || [];
+    const userReview = getUserReview?.(id);
+
+    useEffect(() => {
+        if (userReview) {
+            setUserRating(userReview.rating);
+            setUserExperience(userReview.experience || "");
+            setSubmitted(true);
+        } else {
+            setUserRating(0);
+            setUserExperience("");
+            setSubmitted(false);
+        }
+    }, [userReview]);
 
     const isInCart = cartItems.some((item) => item.id === parseInt(id));
 
@@ -43,13 +58,6 @@ export default function ProductDetailPage() {
                     .filter((p) => p.category === data.category && p.id !== data.id)
                     .slice(0, 4);
                 setRelatedProducts(related);
-
-                const userReview = getUserReview(id);
-                if (userReview) {
-                    setUserRating(userReview.rating);
-                    setUserExperience(userReview.experience);
-                    setSubmitted(true);
-                }
             } catch (err) {
                 console.error(err);
             } finally {
@@ -82,12 +90,8 @@ export default function ProductDetailPage() {
             router.push("/login");
             return;
         }
-        if (userRating > 0 && userExperience.trim() && product) {
-            const currentRating = ratings[id] || product.rating;
-            const newCount = currentRating.count + 1;
-            const newAvg = (currentRating.rate * currentRating.count + userRating) / newCount;
-
-            updateRating(id, newAvg, newCount);
+        if (userRating > 0 && product) {
+            updateRating(id, userRating, userExperience);
             setSubmitted(true);
         }
     };
@@ -112,7 +116,7 @@ export default function ProductDetailPage() {
         </div>
     );
 
-    const displayRating = ratings[id] || product.rating;
+    const displayRating = ratings[id] || { rate: 0, count: 0 };
 
     return (
         <div className="min-h-screen bg-background text-foreground pb-20">
@@ -157,7 +161,7 @@ export default function ProductDetailPage() {
                             {product.name}
                         </h1>
                         <div className="flex items-center gap-6">
-                            <p className="text-3xl font-serif text-accent">${product.price.toFixed(2)}</p>
+                            <p className="text-3xl font-serif text-accent">₹{product.price.toFixed(2)}</p>
                             <div className="flex items-center gap-1">
                                 {[...Array(5)].map((_, i) => (
                                     <FaStar key={i} color={i < Math.round(displayRating.rate) ? "#D4AF37" : "#E5E7EB"} size={12} />
@@ -334,11 +338,35 @@ export default function ProductDetailPage() {
                                     key={p.id}
                                     {...p}
                                     onClick={(id) => router.push(`/products/${id}`)}
-                                    rating={ratings[p.id]?.rate ?? p.rating?.rate}
-                                    reviewCount={ratings[p.id]?.count ?? p.rating?.count}
                                 />
                             ))}
                         </div>
+                    </div>
+                </div>
+
+                {/* List all reviews */}
+                <div className="mt-20 border-t border-black/5 pt-16">
+                    <h3 className="text-2xl font-serif italic mb-8">All Guest Experiences ({productReviews.length})</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {productReviews.length > 0 ? productReviews.map((review, idx) => (
+                            <div key={idx} className="bg-foreground/[0.02] p-8 border border-black/5">
+                                <div className="flex justify-between items-center mb-4">
+                                    <div className="flex gap-1">
+                                        {[...Array(5)].map((_, i) => (
+                                            <FaStar key={i} color={i < review.rating ? "#D4AF37" : "#E5E7EB"} size={12} />
+                                        ))}
+                                    </div>
+                                    <span className="text-[10px] uppercase tracking-widest opacity-40">
+                                        {new Date(review.created_at || Date.now()).toLocaleDateString()}
+                                    </span>
+                                </div>
+                                {review.experience && (
+                                    <p className="italic opacity-80 text-sm font-serif leading-relaxed">"{review.experience}"</p>
+                                )}
+                            </div>
+                        )) : (
+                            <p className="text-sm opacity-50">Be the first to share your experience with this piece.</p>
+                        )}
                     </div>
                 </div>
             </div>

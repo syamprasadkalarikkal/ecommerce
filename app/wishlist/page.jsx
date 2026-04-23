@@ -126,7 +126,7 @@ export default function WishlistPage() {
               </div>
               <div className="flex items-center space-x-4">
                 <span className="text-lg font-medium">
-                  ${item.price.toFixed(2)}
+                  ₹{item.price.toFixed(2)}
                 </span>
                 <button
                   onClick={() => removeFromWishlist(item.product_id)}

@@ -109,8 +109,6 @@ export default function ProductsList() {
             <ProductCard
               key={p.id}
               {...p}
-              rating={p.rating?.rate}
-              reviewCount={p.rating?.count}
               onClick={(id) => router.push(`/products/${id}`)}
             />
           ))}

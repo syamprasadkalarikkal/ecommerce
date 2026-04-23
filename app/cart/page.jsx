@@ -166,7 +166,7 @@ export default function CartPage() {
                     <div className="text-right">
                       <p className="text-[10px] uppercase tracking-[0.2em] opacity-40 mb-1">Total</p>
                       <p className="text-xl font-serif">
-                        ${(item.price * item.quantity).toFixed(2)}
+                        ₹{(item.price * item.quantity).toFixed(2)}
                       </p>
                     </div>
                   </div>
@@ -195,7 +195,7 @@ export default function CartPage() {
               <div className="space-y-4 mb-8 text-sm font-light">
                 <div className="flex justify-between">
                   <span className="opacity-60">Subtotal</span>
-                  <span>${subtotal.toFixed(2)}</span>
+                  <span>₹{subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="opacity-60">Shipping</span>
@@ -209,7 +209,7 @@ export default function CartPage() {
 
               <div className="border-t border-black/10 pt-6 mb-10 flex justify-between items-end">
                 <span className="text-[10px] uppercase tracking-[0.3em] font-bold">Estimated Total</span>
-                <span className="text-3xl font-serif text-[#800000]">${subtotal.toFixed(2)}</span>
+                <span className="text-3xl font-serif text-[#800000]">₹{subtotal.toFixed(2)}</span>
               </div>
 
               <Link

@@ -215,16 +215,16 @@ export default function ProductDetailsPage() {
 
   if (!product) {
     return (
-      <div className="max-w-4xl mx-auto p-8 text-center">
-        <h2 className="text-2xl font-bold mb-4">Product not found</h2>
-        <p className="text-gray-500 mb-6">
-          The product you&apos;re looking for could not be found in your cart.
+      <div className="max-w-4xl mx-auto p-12 mt-12 text-center border border-black/10 bg-accent/5">
+        <h2 className="text-3xl font-serif mb-6 tracking-tighter">Item Not Found</h2>
+        <p className="text-foreground/60 mb-10 max-w-md mx-auto italic font-light">
+          The item you&apos;re looking for could not be found in your bag.
         </p>
         <Link
           href="/checkout"
-          className="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 inline-block"
+          className="border border-black text-foreground hover:bg-black hover:text-white px-10 py-4 transition-colors uppercase tracking-[0.2em] text-xs font-bold inline-block"
         >
-          Back to checkout
+          Return to Bag
         </Link>
       </div>
     );
@@ -236,105 +236,109 @@ export default function ProductDetailsPage() {
   const total = itemTotal + shipping + tax;
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-8 text-black">
-      <div className="mb-6">
+    <div className="max-w-6xl mx-auto p-4 md:p-8 text-black mb-20 mt-8">
+      <div className="mb-12">
         <Link
           href="/checkout"
-          className="flex items-center text-indigo-600 hover:text-indigo-800"
+          className="flex items-center text-xs uppercase tracking-[0.2em] font-medium text-foreground hover:opacity-70 transition-opacity w-fit"
         >
-          <ChevronLeft size={20} />
-          <span className="ml-1">Back to checkout</span>
+          <ChevronLeft size={16} />
+          <span className="ml-2 border-b border-transparent hover:border-foreground transition-all">Back to bag</span>
         </Link>
       </div>
 
-      <h1 className="text-2xl font-bold mb-6">Product Details & Checkout</h1>
+      <div className="flex flex-col items-center text-center mb-16">
+        <span className="text-xs uppercase tracking-[0.4em] opacity-60 mb-4 block">Final Step</span>
+        <h1 className="text-4xl md:text-5xl font-serif tracking-tighter">Complete Order</h1>
+        <div className="w-16 h-px bg-accent mt-8"></div>
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <div className="mb-4">
-              <div className="mb-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 lg:gap-8">
+        <div className="lg:col-span-1 order-2 lg:order-1">
+          <div className="bg-accent/5 border border-black/10 p-8 sticky top-8">
+            <div className="mb-8 border-b border-black/10 pb-8">
+              <div className="mb-6">
                 <Image
                   src={product.image}
                   alt={product.name}
                   width={400}
-                  height={300}
-                  className="h-48 w-full object-contain"
+                  height={500}
+                  className="w-full object-cover border border-black/5"
                 />
               </div>
 
-              <h3 className="font-bold text-lg mb-2">{product.name}</h3>
+              <h3 className="font-serif italic text-xl mb-4 text-center">{product.name}</h3>
 
-              <div className="mb-3">
+              <div className="mb-6 flex justify-center opacity-80">
                 <ProductRating
                   productId={product.id}
-                  initialRating={product.rating?.rate || 0}
-                  initialCount={product.rating?.count || 0}
+                  initialRating={0}
+                  initialCount={0}
                 />
               </div>
 
               {/* Quantity Controls */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              <div className="mb-8">
+                <label className="block text-xs uppercase tracking-widest font-medium text-foreground mb-4 text-center">
                   Quantity
                 </label>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center justify-center space-x-4">
                   <button
                     onClick={() => handleQuantityChange(product.quantity - 1)}
-                    className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-8 h-8 border border-black/30 flex items-center justify-center hover:bg-black/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                     disabled={product.quantity <= 1}
                     aria-label="Decrease quantity"
                     title="Decrease quantity"
                   >
-                    <Minus size={16} />
+                    <Minus size={12} />
                   </button>
-                  <span className="w-12 text-center font-medium">
+                  <span className="w-8 text-center font-serif text-lg">
                     {product.quantity}
                   </span>
                   <button
                     onClick={() => handleQuantityChange(product.quantity + 1)}
-                    className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50"
+                    className="w-8 h-8 border border-black/30 flex items-center justify-center hover:bg-black/5 transition-colors"
                     aria-label="Increase quantity"
                     title="Increase quantity"
                   >
-                    <Plus size={16} />
+                    <Plus size={12} />
                   </button>
                 </div>
               </div>
 
-              <h3 className="font-semibold text-md mb-1">Description</h3>
-              <p className="text-sm text-gray-700">
+              <h3 className="text-xs uppercase tracking-widest font-bold mb-3 text-center">Description</h3>
+              <p className="text-sm font-light text-foreground/80 leading-relaxed text-center">
                 {product.description ||
-                  "This premium product offers excellent quality and value."}
+                  "A statement piece crafted for those who define elegance on their own terms."}
               </p>
             </div>
 
-            <div className="border-t pt-4">
-              <h3 className="font-semibold text-md mb-2">Order Summary</h3>
-              <div className="space-y-2 text-sm">
+            <div>
+              <h3 className="text-xs uppercase tracking-[0.2em] font-bold mb-6 text-center">Order Summary</h3>
+              <div className="space-y-4 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">
-                    Product price ({product.quantity}x)
+                  <span className="text-foreground/70">
+                    Item Total ({product.quantity}x)
                   </span>
-                  <span>${itemTotal.toFixed(2)}</span>
+                  <span className="font-serif">₹{itemTotal.toFixed(2)}</span>
                 </div>
                 {product.quantity > 1 && (
-                  <div className="flex justify-between text-xs text-gray-500">
-                    <span>${product.price.toFixed(2)} each</span>
+                  <div className="flex justify-start text-xs text-foreground/40 italic -mt-2">
+                    <span>₹{product.price.toFixed(2)} each</span>
                   </div>
                 )}
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Shipping</span>
-                  <span>${shipping.toFixed(2)}</span>
+                  <span className="text-foreground/70">Shipping</span>
+                  <span className="font-serif">₹{shipping.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Tax</span>
-                  <span>${tax.toFixed(2)}</span>
+                  <span className="text-foreground/70">Estimated Tax</span>
+                  <span className="font-serif">₹{tax.toFixed(2)}</span>
                 </div>
-                <div className="border-t pt-2 mt-2">
-                  <div className="flex justify-between font-semibold">
-                    <span>Total</span>
-                    <span>${total.toFixed(2)}</span>
+                <div className="border-t border-black/10 pt-4 mt-6">
+                  <div className="flex justify-between items-center bg-black text-white p-4">
+                    <span className="uppercase tracking-[0.2em] text-xs font-bold">Total</span>
+                    <span className="font-serif text-xl border-l border-white/20 pl-4">₹{total.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -342,9 +346,9 @@ export default function ProductDetailsPage() {
           </div>
         </div>
 
-        <div className="lg:col-span-2 space-y-8">
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold mb-4">Shipping Information</h2>
+        <div className="lg:col-span-2 space-y-12 order-1 lg:order-2">
+          <div className="bg-transparent border border-black/10 p-8">
+            <h2 className="text-xs uppercase tracking-[0.2em] font-bold mb-8 pb-4 border-b border-black/10">Shipping Address</h2>
             <ShippingForm
               form={form}
               errors={errors}
@@ -352,8 +356,8 @@ export default function ProductDetailsPage() {
             />
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold mb-4">Payment Method</h2>
+          <div className="bg-transparent border border-black/10 p-8">
+            <h2 className="text-xs uppercase tracking-[0.2em] font-bold mb-8 pb-4 border-b border-black/10">Payment Details</h2>
             <PaymentForm
               form={form}
               errors={errors}
@@ -367,20 +371,21 @@ export default function ProductDetailsPage() {
             <button
               onClick={handleCompleteOrder}
               disabled={isProcessing}
-              className="mt-6 w-full bg-green-600 text-white py-3 rounded hover:bg-green-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="mt-12 w-full bg-[#800000] text-white py-5 hover:bg-black transition-colors duration-500 text-xs uppercase tracking-[0.2em] font-bold disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isProcessing
                 ? "Processing Order..."
-                : `Pay $${total.toFixed(2)} and Complete Order`}
+                : `Pay ₹${total.toFixed(2)} — Complete Order`}
             </button>
-            <div className="mt-6 flex items-center justify-center space-x-4 text-sm text-gray-500">
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center sm:space-x-8 space-y-4 sm:space-y-0 text-xs uppercase tracking-widest text-foreground/50 border-t border-black/10 pt-6">
               <div className="flex items-center">
-                <Shield size={16} className="mr-1" />
-                <span>Secure Payment</span>
+                <Shield size={16} className="mr-2 opacity-60" />
+                <span>Secure Checkout</span>
               </div>
+              <div className="flex items-center hidden sm:block w-px h-4 bg-black/20"></div>
               <div className="flex items-center">
-                <Truck size={16} className="mr-1" />
-                <span>Fast Shipping</span>
+                <Truck size={16} className="mr-2 opacity-60" />
+                <span>Express Delivery</span>
               </div>
             </div>
           </div>

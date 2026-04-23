@@ -15,14 +15,14 @@ export async function POST(req) {
   const itemsHtml = order.items
     .map(
       (item) =>
-        `<li>${item.quantity} x ${item.name} - $${(item.price * item.quantity).toFixed(2)}</li>`,
+        `<li>${item.quantity} x ${item.name} - ₹${(item.price * item.quantity).toFixed(2)}</li>`,
     )
     .join("");
 
   const html = `
     <h2>Order Confirmation - Order #${order.id}</h2>
     <p>Thank you for your order, ${order.customerInfo.firstName}!</p>
-    <p><strong>Total:</strong> $${order.total.toFixed(2)}</p>
+    <p><strong>Total:</strong> ₹${order.total.toFixed(2)}</p>
     <h3>Items:</h3>
     <ul>${itemsHtml}</ul>
     <h3>Shipping Address:</h3>
