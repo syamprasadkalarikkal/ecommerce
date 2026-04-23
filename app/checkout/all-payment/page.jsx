@@ -1,14 +1,15 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import Link from "next/link";
-import { ChevronLeft, Truck, Shield } from "lucide-react";
+import { ChevronLeft, Truck, Shield, Plus, CheckCircle2 } from "lucide-react";
 import ShippingForm from "@/componenets/ShippingForm";
 import PaymentForm from "@/componenets/PaymentForm";
 import Image from "next/image";
 import { stripePromise } from "@/lib/stripe";
+import { supabase } from "@/lib/supabaseClient";
 
 const requiredFields = [
   "firstName",
@@ -24,6 +25,14 @@ export default function AllProductsPaymentPage() {
   const { cartItems, clearCart } = useCart();
   const [paymentMethod, setPaymentMethod] = useState("credit-card");
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Auth & Address states
+  const [user, setUser] = useState(null);
+  const [addresses, setAddresses] = useState([]);
+  const [isLoadingAddresses, setIsLoadingAddresses] = useState(true);
+  const [showNewAddressForm, setShowNewAddressForm] = useState(false);
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
+
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -38,6 +47,56 @@ export default function AllProductsPaymentPage() {
   });
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
+
+  useEffect(() => {
+    const fetchUserAndAddresses = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          setUser(session.user);
+          setForm(prev => ({ ...prev, email: session.user.email }));
+          const { data, error } = await supabase
+            .from("user_addresses")
+            .select("*")
+            .eq("user_id", session.user.id)
+            .order("created_at", { ascending: false });
+
+          if (!error && data && data.length > 0) {
+            setAddresses(data);
+            const defaultAddr = data.find(a => a.is_default) || data[0];
+            handleSelectAddress(defaultAddr);
+          } else {
+            setShowNewAddressForm(true);
+          }
+        } else {
+          setShowNewAddressForm(true);
+        }
+      } catch (err) {
+        console.error("Error loading addresses", err);
+      } finally {
+        setIsLoadingAddresses(false);
+      }
+    };
+    fetchUserAndAddresses();
+  }, []);
+
+  const handleSelectAddress = (addr) => {
+    setSelectedAddressId(addr.id);
+    setShowNewAddressForm(false);
+    setForm(prev => ({
+      ...prev,
+      firstName: addr.first_name,
+      lastName: addr.last_name,
+      address: addr.address,
+      city: addr.city,
+      state: addr.state,
+      pincode: addr.pincode,
+    }));
+    // Clear any shipping form errors
+    const clearedErrors = { ...errors };
+    requiredFields.forEach(f => { if (clearedErrors[f]) delete clearedErrors[f]; });
+    setErrors(clearedErrors);
+  };
 
   const subtotal = cartItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
@@ -97,6 +156,11 @@ export default function AllProductsPaymentPage() {
       formattedValue = value.replace(/\D/g, "").substr(0, 6);
     }
 
+    // Automatically deselect saved addresses if user manually modifies the form
+    if (["firstName", "lastName", "address", "city", "state", "pincode"].includes(id)) {
+      if (selectedAddressId) setSelectedAddressId(null);
+    }
+
     setForm((prev) => ({ ...prev, [id]: formattedValue }));
     setTouched((prev) => ({ ...prev, [id]: true }));
 
@@ -111,7 +175,7 @@ export default function AllProductsPaymentPage() {
 
     // Validate required fields
     requiredFields.forEach((field) => {
-      if (!form[field].trim()) {
+      if (!form[field] || !form[field].trim()) {
         newErrors[field] = "This field is required";
       }
     });
@@ -180,6 +244,22 @@ export default function AllProductsPaymentPage() {
     setIsProcessing(true);
 
     try {
+
+      // Save new address if applicable
+      if (user && !selectedAddressId) {
+        await supabase.from("user_addresses").insert({
+          user_id: user.id,
+          first_name: form.firstName,
+          last_name: form.lastName,
+          email: form.email,
+          address: form.address,
+          city: form.city,
+          state: form.state,
+          pincode: form.pincode,
+          is_default: addresses.length === 0
+        });
+      }
+
       if (paymentMethod === "stripe") {
         // Stripe checkout flow
         const stripe = await stripePromise;
@@ -331,12 +411,55 @@ export default function AllProductsPaymentPage() {
 
         <div className="lg:col-span-2 space-y-12 order-1 lg:order-2">
           <div className="bg-transparent border border-black/10 p-8">
-            <h2 className="text-xs uppercase tracking-[0.2em] font-bold mb-8 pb-4 border-b border-black/10">Shipping Address</h2>
-            <ShippingForm
-              form={form}
-              errors={errors}
-              handleChange={handleChange}
-            />
+            <div className="flex justify-between items-center mb-8 pb-4 border-b border-black/10">
+              <h2 className="text-xs uppercase tracking-[0.2em] font-bold">Shipping Address</h2>
+              {addresses.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowNewAddressForm(!showNewAddressForm)}
+                  className="text-xs uppercase tracking-[0.2em] font-bold text-[#800000] flex items-center hover:opacity-70 transition-opacity"
+                >
+                  <Plus size={14} className="mr-1" />
+                  {showNewAddressForm ? "Saved Addresses" : "New Address"}
+                </button>
+              )}
+            </div>
+
+            {isLoadingAddresses ? (
+              <div className="py-8 text-center text-sm uppercase tracking-widest opacity-50">Loading addresses...</div>
+            ) : (
+              <>
+                {!showNewAddressForm && addresses.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {addresses.map(addr => (
+                      <div
+                        key={addr.id}
+                        onClick={() => handleSelectAddress(addr)}
+                        className={`p-6 border cursor-pointer transition-colors relative ${selectedAddressId === addr.id ? 'border-[#800000] bg-[#800000]/5' : 'border-black/10 hover:border-black/30 bg-white'}`}
+                      >
+                        {selectedAddressId === addr.id && (
+                          <CheckCircle2 size={18} className="absolute top-4 right-4 text-[#800000]" />
+                        )}
+                        <p className="font-bold text-sm uppercase tracking-widest mb-2">{addr.first_name} {addr.last_name}</p>
+                        <p className="text-sm font-light text-black/70">{addr.address}</p>
+                        <p className="text-sm font-light text-black/70">{addr.city}, {addr.state} {addr.pincode}</p>
+                        {addr.is_default && (
+                          <span className="inline-block mt-4 text-[10px] uppercase tracking-widest font-bold bg-black text-white px-2 py-1">
+                            Default
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <ShippingForm
+                    form={form}
+                    errors={errors}
+                    handleChange={handleChange}
+                  />
+                )}
+              </>
+            )}
           </div>
 
           <div className="bg-transparent border border-black/10 p-8">
