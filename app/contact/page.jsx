@@ -8,9 +8,9 @@ import {
   CheckCircle,
   AlertCircle,
   Loader2,
-  Facebook,
-  Instagram,
-  Twitter,
+  Share2,
+  Heart,
+  MessageCircle,
 } from "lucide-react";
 
 const ContactPage = () => {
@@ -106,19 +106,19 @@ const ContactPage = () => {
 
   const socials = [
     {
-      icon: Facebook,
+      icon: Share2,
       url: "https://www.facebook.com/",
       color: "hover:text-blue-600",
       name: "Facebook",
     },
     {
-      icon: Instagram,
+      icon: Heart,
       url: "https://www.instagram.com/",
       color: "hover:text-pink-500",
       name: "Instagram",
     },
     {
-      icon: Twitter,
+      icon: MessageCircle,
       url: "https://x.com/?lang=en-in",
       color: "hover:text-sky-500",
       name: "Twitter",
