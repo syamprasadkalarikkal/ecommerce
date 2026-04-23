@@ -1,5 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { Suspense } from "react";
 import Navbar from "../componenets/Navbar";
 import Footer from "@/componenets/Footer";
 import { CartProvider } from "@/context/CartContext";
@@ -31,7 +32,9 @@ export default function RootLayout({ children }) {
         <CartProvider>
           <WishlistProvider>
             <RatingsProvider>
-              <Navbar />
+              <Suspense fallback={<div className="h-16 bg-gray-100" />}>
+                <Navbar />
+              </Suspense>
               <main className="flex-grow max-w-7xl mx-auto px-4 py-6 w-full">{children}</main>
               <Footer />
               <Toaster position="top-right" />
